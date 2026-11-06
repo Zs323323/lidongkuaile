@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>立冬快乐 ❄</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* ===== 2:3 竖版画布 ===== */
+  .phone {
+    --u: 4px;
+    position: relative;
+    width: min(100vw, calc(100dvh * 2 / 3));
+    height: min(calc(100vw * 3 / 2), 100dvh);
+    background: #000;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  #bgCanvas   { z-index: 1; }
+  #snowCanvas { z-index: 9; pointer-events: none; }
+
+  /* ===== 中心粉色呼吸光晕 ===== */
+  .glow {
+    position: absolute;
+    left: 50%;
+    top: 39%;
+    width: 132%;
+    height: 76%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at center,
+      rgba(255, 78, 152, 0.15) 0%,
+      rgba(255, 62, 140, 0.075) 32%,
+      rgba(255, 62, 140, 0.025) 54%,
+      transparent 72%);
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: screen;
+    animation: glowPulse 6.5s ease-in-out infinite;
+    transition: opacity 0.55s ease;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.68; transform: translate(-50%, -50%) scale(1); }
+    50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.05); }
+  }
+
+  /* ===== 暗角 ===== */
+  .vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    background: radial-gradient(ellipse 74% 66% at 50% 46%,
+      transparent 44%,
+      rgba(0, 0, 0, 0.48) 100%);
+  }
+
+  /* ===== 顶部祝福文案：温馨暖粉 ===== */
+  .top-copy {
+    position: absolute;
+    top: 4.5%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    z-index: 4;
+    padding: 0 8%;
+    transition: opacity 0.55s ease;
+  }
+
+  .top-copy p {
+    color: #ffd8b8;
+    font-size: calc(var(--u) * 3.3);
+    line-height: 1.95;
+    letter-spacing: 0.06em;
+    font-weight: 400;
+    text-shadow:
+      0 0 10px rgba(255, 196, 150, 0.42),
+      0 0 24px rgba(255, 150, 165, 0.26),
+      0 0 48px rgba(255, 120, 160, 0.14);
+    min-height: 1.95em;
+  }
+  .top-copy p:first-child {
+    color: #ffe0c2;
+    font-size: calc(var(--u) * 4.5);
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    margin-bottom: calc(var(--u) * 1.5);
+    text-shadow:
+      0 0 12px rgba(255, 214, 168, 0.62),
+      0 0 30px rgba(255, 164, 170, 0.36),
+      0 0 60px rgba(255, 130, 160, 0.18);
+  }
+
+  .top-char {
+    display: inline-block;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .top-char.show {
+    opacity: 1;
+    animation: topCharPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes topCharPop {
+    0%   { opacity: 0; transform: translateY(9px) scale(0.35); }
+    60%  { opacity: 1; transform: translateY(-2px) scale(1.14); }
+    100% { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+
+  /* ===== 右上角：点击按钮 + 音乐按钮 ===== */
+  .top-right {
+    position: absolute;
+    top: 2.2%;
+    right: 3.2%;
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 1.4);
+    animation: btnIn 1s ease 1.9s both;
+  }
+  @keyframes btnIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .tap-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 0.9);
+    padding: calc(var(--u) * 1.4) calc(var(--u) * 1.6);
+    cursor: pointer;
+    border: none;
+    background: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.45s ease, visibility 0.45s ease;
+  }
+
+  .tap-snowman {
+    display: block;
+    font-size: calc(var(--u) * 6.4);
+    line-height: 1;
+    filter:
+      drop-shadow(0 0 9px rgba(206, 229, 255, 0.5))
+      drop-shadow(0 0 24px rgba(160, 195, 255, 0.26));
+    animation: snowmanFloat 4.2s ease-in-out infinite;
+  }
+  @keyframes snowmanFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
+  }
+
+  .tap-label {
+    font-size: calc(var(--u) * 2.7);
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    color: #ffd3e6;
+    text-shadow:
+      0 0 8px rgba(255, 160, 205, 0.85),
+      0 0 20px rgba(255, 85, 155, 0.45);
+    animation: labelPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes labelPulse {
+    0%, 100% { opacity: 0.62; }
+    50%      { opacity: 1; }
+  }
+
+  /* ===== 音乐旋转图标 ===== */
+  .music-btn {
+    position: relative;
+    width: calc(var(--u) * 7.4);
+    height: calc(var(--u) * 7.4);
+    flex: none;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 150, 200, 0.55);
+    background: radial-gradient(circle at 35% 30%,
+      rgba(255, 120, 180, 0.18), rgba(255, 60, 140, 0.06));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 10px rgba(255, 90, 160, 0.22);
+    transition: box-shadow 0.4s ease, border-color 0.4s ease, background 0.4s ease;
+  }
+  .music-btn:active { transform: scale(0.94); }
+
+  .music-btn.playing {
+    border-color: rgba(255, 185, 225, 0.9);
+    box-shadow:
+      0 0 14px rgba(255, 110, 180, 0.55),
+      0 0 30px rgba(255, 60, 140, 0.28);
+    background: radial-gradient(circle at 35% 30%,
+      rgba(255, 145, 200, 0.26), rgba(255, 70, 150, 0.1));
+  }
+
+  .music-note {
+    width: 54%;
+    height: 54%;
+    fill: #ffc0dd;
+    filter: drop-shadow(0 0 5px rgba(255, 140, 200, 0.8));
+    transform-origin: 50% 50%;
+    animation: spinNote 3.4s linear infinite;
+    animation-play-state: paused;
+  }
+  .music-btn.playing .music-note {
+    animation-play-state: running;
+  }
+  @keyframes spinNote {
+    to { transform: rotate(360deg); }
+  }
+
+  .music-ring {
+    position: absolute;
+    inset: calc(var(--u) * -0.6);
+    border-radius: 50%;
+    border: 1px dashed rgba(255, 170, 215, 0.34);
+    pointer-events: none;
+    animation: spinRing 9s linear infinite;
+    animation-play-state: paused;
+  }
+  .music-btn.playing .music-ring {
+    animation-play-state: running;
+  }
+  @keyframes spinRing {
+    to { transform: rotate(-360deg); }
+  }
+
+  /* ===== 点阵爱心 ===== */
+  .heart-wrap {
+    position: absolute;
+    left: 50%;
+    top: 38%;
+    width: 56%;
+    aspect-ratio: 32 / 29;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    transition: opacity 0.55s ease;
+  }
+
+  .heart-wrap::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 132%;
+    height: 132%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle,
+      rgba(255, 92, 164, 0.22) 0%,
+      rgba(255, 62, 140, 0.085) 44%,
+      transparent 68%);
+    filter: blur(17px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #particleCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .heart {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+
+  .heart-dot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: calc(var(--u) * 2.5);
+    font-weight: 400;
+    line-height: 1;
+    white-space: nowrap;
+    color: #ff9ac8;
+    text-shadow:
+      0 0 6px  rgba(255, 138, 192, 0.95),
+      0 0 14px rgba(255, 72, 152, 0.62);
+    animation: dotTwinkle 3.2s ease-in-out infinite;
+    will-change: opacity;
+  }
+  @keyframes dotTwinkle {
+    0%, 100% { opacity: 0.52; }
+    50%      { opacity: 1; }
+  }
+
+  /* ===== 爱心中央：钢琴音符式「立冬快乐」 ===== */
+  .heart-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.06em;
+    font-size: calc(var(--u) * 6.4);
+    font-weight: 800;
+    white-space: nowrap;
+    color: #ffb8d8;
+    z-index: 5;
+    transition: opacity 0.55s ease;
+    animation: centerSoftGlow 3.8s ease-in-out infinite;
+  }
+
+  @keyframes centerSoftGlow {
+    0%, 100% { opacity: 0.94; }
+    50%      { opacity: 1; }
+  }
+
+  /* 外层：负责入场弹跳（琴键按下又弹起） */
+  .hc-wrap {
+    display: inline-block;
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+
+  .hc-wrap.show {
+    animation: hcEnter 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes hcEnter {
+    0%   { opacity: 0; transform: translateY(110%) scale(0.28) rotate(-10deg); }
+    45%  { opacity: 1; transform: translateY(-18%) scale(1.16) rotate(4deg); }
+    68%  { opacity: 1; transform: translateY(6%)   scale(0.95) rotate(-2deg); }
+    85%  { opacity: 1; transform: translateY(-2%)  scale(1.02) rotate(0.6deg); }
+    100% { opacity: 1; transform: translateY(0)    scale(1)    rotate(0); }
+  }
+
+  /* 内层：落定后持续轻微浮动，像音符在跳动 */
+  .hc-char {
+    display: inline-block;
+    text-shadow:
+      0 0 8px  rgba(255, 158, 208, 0.95),
+      0 0 20px rgba(255, 88, 158, 0.8),
+      0 0 44px rgba(255, 52, 132, 0.5),
+      0 0 86px rgba(255, 40, 120, 0.26);
+    animation: hcFloat 2.6s ease-in-out infinite;
+    animation-delay: var(--floatDelay, 0s);
+  }
+
+  @keyframes hcFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6%); }
+  }
+
+  /* ===== 爱心下方的一排小雪人 ===== */
+  .snowmen {
+    position: absolute;
+    left: 50%;
+    top: 66%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: flex-end;
+    gap: calc(var(--u) * 2);
+    z-index: 4;
+    pointer-events: none;
+    transition: opacity 0.55s ease;
+  }
+
+  .sm-item {
+    position: relative;
+    display: block;
+    line-height: 1;
+    animation: snowmanFloat 4.2s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .sm-glyph {
+    display: block;
+    font-size: 1em;
+    filter:
+      drop-shadow(0 0 8px rgba(206, 229, 255, 0.45))
+      drop-shadow(0 0 20px rgba(160, 195, 255, 0.22));
+  }
+
+  .sm-particle {
+    position: absolute;
+    width: calc(var(--u) * 0.44);
+    height: calc(var(--u) * 0.44);
+    border-radius: 50%;
+    background: rgba(255, 190, 225, 0.95);
+    box-shadow:
+      0 0 5px rgba(255, 152, 205, 0.9),
+      0 0 12px rgba(255, 92, 170, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    animation-name: smParticle;
+    animation-timing-function: ease-out;
+    animation-iteration-count: infinite;
+    will-change: transform, opacity;
+  }
+
+  @keyframes smParticle {
+    0%   { opacity: 0;    transform: translate(0, 0) scale(0.3); }
+    18%  { opacity: 0.95; }
+    70%  { opacity: 0.55; }
+    100% { opacity: 0;    transform: translate(var(--dx, 0px), var(--dy, -24px)) scale(0.5); }
+  }
+
+  /* ===== 竖排祝福遮罩 ===== */
+  .bless-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    background: rgba(2, 0, 6, 0.56);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.55s ease, visibility 0.55s ease;
+  }
+  .bless-mask.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .bless-box {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 11.5%;
+    bottom: 11%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0 3%;
+    overflow: hidden;
+  }
+
+  .bless-card {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    height: 100%;
+    max-width: 100%;
+    font-size: calc(var(--u) * 3.5);
+    line-height: 1.9;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    color: #ffd9ea;
+    text-shadow:
+      0 0 10px rgba(255, 152, 202, 0.72),
+      0 0 26px rgba(255, 80, 160, 0.4),
+      0 0 54px rgba(255, 50, 130, 0.2);
+    transform: translateY(10px);
+    opacity: 0;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
+  }
+  .bless-mask.open .bless-card {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .bless-char {
+    display: inline-block;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .bless-char.show {
+    opacity: 1;
+    animation: charPop 0.44s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes charPop {
+    0%   { opacity: 0; transform: scale(0.25); }
+    60%  { opacity: 1; transform: scale(1.13); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* ===== 播放完成后的「小雪人 + 收起」按钮 ===== */
+  .bless-done {
+    position: absolute;
+    left: 50%;
+    bottom: 2.4%;
+    transform: translateX(-50%) translateY(8px);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 1.1);
+    padding: calc(var(--u) * 1.3) calc(var(--u) * 2.2);
+    border: none;
+    background: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.55s ease;
+    z-index: 3;
+  }
+  .bless-done.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .done-snowman {
+    display: block;
+    font-size: calc(var(--u) * 5.2);
+    line-height: 1;
+    filter:
+      drop-shadow(0 0 9px rgba(206, 229, 255, 0.5))
+      drop-shadow(0 0 22px rgba(160, 195, 255, 0.26));
+    animation: snowmanFloat 4.2s ease-in-out infinite;
+  }
+
+  .done-label {
+    font-size: calc(var(--u) * 3.1);
+    letter-spacing: 0.14em;
+    font-weight: 500;
+    color: #ffd3e6;
+    text-shadow:
+      0 0 8px rgba(255, 160, 205, 0.9),
+      0 0 22px rgba(255, 85, 155, 0.48);
+    animation: labelPulse 2.4s ease-in-out infinite;
+  }
+
+  /* 祝福打开时：主体淡化，点击按钮隐藏（音乐按钮保持可用） */
+  .phone.blessing-open .top-copy,
+  .phone.blessing-open .heart-wrap,
+  .phone.blessing-open .snowmen {
+    opacity: 0.13;
+  }
+  .phone.blessing-open .glow { opacity: 0.32; }
+  .phone.blessing-open .heart-center {
+    opacity: 0.16 !important;
+    animation: none !important;
+  }
+  .phone.blessing-open .tap-btn {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* ===== 减少动态效果 ===== */
+  @media (prefers-reduced-motion: reduce) {
+    .glow, .heart-dot, .tap-snowman,
+    .tap-label, .sm-item, .sm-particle,
+    .done-snowman, .done-label { animation: none !important; }
+    .top-right { animation: none !important; opacity: 1; }
+    .music-note, .music-ring { animation: none !important; }
+    .heart-dot { opacity: 1; }
+    .heart-center { animation: none !important; opacity: 1; }
+    .hc-wrap { opacity: 1; animation: none !important; }
+    .hc-char { animation: none !important; }
+    .top-char { opacity: 1; animation: none !important; }
+    .bless-char { opacity: 1; animation: none !important; }
+    .bless-mask, .bless-card, .bless-done { transition: none; }
+    .sm-particle { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <canvas id="bgCanvas" class="layer"></canvas>
+  <div class="glow"></div>
+  <div class="vignette"></div>
+
+  <header class="top-copy" id="topCopy"></header>
+
+  <!-- 右上角：点击按钮 + 音乐按钮（音乐在点击右边） -->
+  <div class="top-right">
+    <button class="tap-btn" id="tapBtn" type="button" aria-label="点击查看立冬祝福">
+      <span class="tap-snowman" aria-hidden="true">⛄</span>
+      <span class="tap-label">点击</span>
+    </button>
+
+    <button class="music-btn" id="musicBtn" type="button"
+            aria-label="播放背景音乐" aria-pressed="false">
+      <span class="music-ring" aria-hidden="true"></span>
+      <svg class="music-note" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 点阵爱心 -->
+  <div class="heart-wrap" id="heartWrap">
+    <canvas id="particleCanvas"></canvas>
+    <div class="heart" id="heart"></div>
+    <div class="heart-center" id="heartCenter"></div>
+  </div>
+
+  <!-- 爱心下方一排小雪人 -->
+  <div class="snowmen" id="snowmen" aria-hidden="true"></div>
+
+  <!-- 竖排祝福层 -->
+  <div class="bless-mask" id="blessMask">
+    <div class="bless-box">
+      <div class="bless-card" id="blessCard"></div>
+    </div>
+
+    <button class="bless-done" id="blessDone" type="button" aria-label="收起立冬祝福">
+      <span class="done-snowman" aria-hidden="true">⛄</span>
+      <span class="done-label">收起</span>
+    </button>
+  </div>
+
+  <canvas id="snowCanvas" class="layer"></canvas>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var phone       = document.getElementById('phone');
+  var bgCanvas    = document.getElementById('bgCanvas');
+  var snowCanvas  = document.getElementById('snowCanvas');
+  var heartEl     = document.getElementById('heart');
+  var heartWrap   = document.getElementById('heartWrap');
+  var heartCenter = document.getElementById('heartCenter');
+  var pCanvas     = document.getElementById('particleCanvas');
+  var tapBtn      = document.getElementById('tapBtn');
+  var musicBtn    = document.getElementById('musicBtn');
+  var blessMask   = document.getElementById('blessMask');
+  var blessCard   = document.getElementById('blessCard');
+  var blessDone   = document.getElementById('blessDone');
+  var topCopy     = document.getElementById('topCopy');
+  var snowmenEl   = document.getElementById('snowmen');
+
+  var bgCtx   = bgCanvas.getContext('2d');
+  var snowCtx = snowCanvas.getContext('2d');
+  var pCtx    = pCanvas.getContext('2d');
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var W = 0, H = 0, DPR = 1;
+  var heartW = 0, heartH = 0;
+
+  var patternCanvas = null;
+  var patternH = 0;
+  var bgOffset = 0;
+
+  var flakes = [];
+  var stars = [];
+  var time = 0;
+  var last = 0;
+
+  var outlinePts = [];
+  var particles = [];
+  var emitters = [];
+
+  var FONT = '"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif';
+
+  /* ==========================================================
+     1. 心形轮廓采样
+     ========================================================== */
+  function buildOutline() {
+    var n = 420;
+    var raw = [];
+    var i, t;
+
+    for (i = 0; i < n; i++) {
+      t = (i / n) * Math.PI * 2;
+      var x = 16 * Math.pow(Math.sin(t), 3);
+      var y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      raw.push([x, y]);
+    }
+
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    raw.forEach(function (p) {
+      if (p[0] < minX) minX = p[0];
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minY) minY = p[1];
+      if (p[1] > maxY) maxY = p[1];
+    });
+
+    var w = (maxX - minX) || 1;
+    var h = (maxY - minY) || 1;
+
+    outlinePts = raw.map(function (p) {
+      return { x: (p[0] - minX) / w, y: 1 - (p[1] - minY) / h };
+    });
+  }
+
+  function heartPointsEven(n) {
+    var STEPS = 1200;
+    var raw = [];
+    var cum = [0];
+    var i, t;
+
+    for (i = 0; i <= STEPS; i++) {
+      t = (i / STEPS) * Math.PI * 2;
+      var x = 16 * Math.pow(Math.sin(t), 3);
+      var y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      raw.push([x, y]);
+    }
+    for (i = 1; i < raw.length; i++) {
+      cum.push(cum[i - 1] + Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]));
+    }
+
+    var total = cum[cum.length - 1];
+    var picked = [];
+    var j = 0;
+
+    for (var k = 0; k < n; k++) {
+      var target = (k / n) * total;
+      while (j < cum.length - 1 && cum[j] < target) j++;
+      picked.push(raw[j]);
+    }
+
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    picked.forEach(function (p) {
+      if (p[0] < minX) minX = p[0];
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minY) minY = p[1];
+      if (p[1] > maxY) maxY = p[1];
+    });
+
+    var w = (maxX - minX) || 1;
+    var h = (maxY - minY) || 1;
+
+    return picked.map(function (p) {
+      return { x: (p[0] - minX) / w, y: 1 - (p[1] - minY) / h };
+    });
+  }
+
+  /* ==========================================================
+     2. 小心心点阵爱心
+     ========================================================== */
+  var DOT_COLORS = ['#ff9ac8', '#ffb0d4', '#ff86bd', '#ffc2de'];
+
+  function buildHeart() {
+    var pts = heartPointsEven(64);
+    var frag = document.createDocumentFragment();
+
+    pts.forEach(function (p, i) {
+      var span = document.createElement('span');
+      span.className = 'heart-dot';
+      span.textContent = '♥';
+      span.style.color = DOT_COLORS[i % DOT_COLORS.length];
+
+      span.style.left = (p.x * 100).toFixed(3) + '%';
+      span.style.top  = (p.y * 100).toFixed(3) + '%';
+
+      span.style.animationDelay    = (-(i * 0.1)).toFixed(2) + 's';
+      span.style.animationDuration = (2.7 + (i % 4) * 0.38).toFixed(2) + 's';
+
+      frag.appendChild(span);
+    });
+
+    heartEl.innerHTML = '';
+    heartEl.appendChild(frag);
+  }
+
+  /* ==========================================================
+     3. 爱心粒子层
+     ========================================================== */
+  function initHeartParticles() {
+    var rect = heartWrap.getBoundingClientRect();
+    heartW = Math.max(1, rect.width);
+    heartH = Math.max(1, rect.height);
+
+    pCanvas.width  = Math.round(heartW * DPR);
+    pCanvas.height = Math.round(heartH * DPR);
+    pCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    particles = [];
+    emitters = [];
+
+    var N = 145;
+    for (var i = 0; i < N; i++) {
+      particles.push({
+        idx: (Math.random() * outlinePts.length) | 0,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.5 + Math.random() * 1.25,
+        size: 0.7 + Math.random() * 1.5,
+        alpha: 0.34 + Math.random() * 0.56,
+        spread: 0.013 + Math.random() * 0.048
+      });
+    }
+  }
+
+  function drawHeartParticles(dt, t) {
+    pCtx.clearRect(0, 0, heartW, heartH);
+    pCtx.globalCompositeOperation = 'lighter';
+
+    var i, p, op, ang, dx, dy, px, py, tw;
+
+    for (i = 0; i < particles.length; i++) {
+      p = particles[i];
+      op = outlinePts[p.idx];
+
+      ang = p.phase + t * p.speed;
+      dx = Math.cos(ang) * p.spread;
+      dy = Math.sin(ang * 1.3) * p.spread;
+
+      px = (op.x + dx) * heartW;
+      py = (op.y + dy) * heartH;
+      tw = 0.55 + 0.45 * Math.sin(t * 2.2 + p.phase);
+
+      pCtx.beginPath();
+      pCtx.arc(px, py, p.size * 2.7, 0, Math.PI * 2);
+      pCtx.fillStyle = 'rgba(255, 96, 172, ' + (p.alpha * tw * 0.19).toFixed(3) + ')';
+      pCtx.fill();
+
+      pCtx.beginPath();
+      pCtx.arc(px, py, p.size, 0, Math.PI * 2);
+      pCtx.fillStyle = 'rgba(255, 192, 224, ' + (p.alpha * tw).toFixed(3) + ')';
+      pCtx.fill();
+    }
+
+    if (!reduceMotion && Math.random() < 0.4) {
+      op = outlinePts[(Math.random() * outlinePts.length) | 0];
+      emitters.push({
+        x: op.x,
+        y: op.y,
+        vx: (Math.random() - 0.5) * 0.05,
+        vy: -0.028 - Math.random() * 0.055,
+        life: 1,
+        decay: 0.4 + Math.random() * 0.48,
+        size: 0.65 + Math.random() * 1.5
+      });
+    }
+
+    for (i = emitters.length - 1; i >= 0; i--) {
+      var e = emitters[i];
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
+      e.life -= e.decay * dt;
+
+      if (e.life <= 0) { emitters.splice(i, 1); continue; }
+
+      pCtx.beginPath();
+      pCtx.arc(e.x * heartW, e.y * heartH, e.size * e.life, 0, Math.PI * 2);
+      pCtx.fillStyle = 'rgba(255, 170, 212, ' + (e.life * 0.7).toFixed(3) + ')';
+      pCtx.fill();
+    }
+
+    pCtx.globalCompositeOperation = 'source-over';
+  }
+
+  /* ==========================================================
+     4. 背景字符墙
+     ========================================================== */
+  function buildPattern() {
+    var stepX   = Math.max(58, W * 0.152);
+    var stepY   = Math.max(25, H * 0.041);
+    var baseFs  = Math.max(9, Math.min(15, W * 0.033));
+
+    patternH = Math.round(H + stepY * 2);
+
+    if (!patternCanvas) patternCanvas = document.createElement('canvas');
+    patternCanvas.width  = Math.round(W * DPR);
+    patternCanvas.height = Math.round(patternH * DPR);
+
+    var g = patternCanvas.getContext('2d');
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.clearRect(0, 0, W, patternH);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+
+    var words = ['爱', 'LOVE', 'U'];
+    var rows  = Math.ceil(patternH / stepY) + 1;
+    var cols  = Math.ceil(W / stepX) + 2;
+
+    for (var r = 0; r < rows; r++) {
+      for (var col = 0; col < cols; col++) {
+        var x = col * stepX + stepX * 0.5 + (Math.random() - 0.5) * stepX * 0.62;
+        var y = r * stepY + stepY * 0.5 + (Math.random() - 0.5) * stepY * 0.55;
+
+        if (x < -70 || x > W + 70) continue;
+
+        var word  = words[(Math.random() * words.length) | 0];
+        var fs    = baseFs * (0.7 + Math.random() * 0.7);
+        var rot   = (Math.random() - 0.5) * 0.46;
+        var alpha = 0.065 + Math.random() * 0.085;
+
+        g.save();
+        g.translate(x, y);
+        g.rotate(rot);
+        g.font = '700 ' + fs.toFixed(1) + 'px ' + FONT;
+        g.fillStyle = 'rgba(255, 122, 178, ' + alpha.toFixed(3) + ')';
+        g.fillText(word, 0, 0);
+        g.restore();
+      }
+    }
+  }
+
+  /* ==========================================================
+     5. 雪花 + 星光
+     ========================================================== */
+  function buildFlakes() {
+    var count = Math.max(30, Math.round(W * H / 5600));
+    flakes = [];
+
+    for (var i = 0; i < count; i++) {
+      flakes.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: 0.6 + Math.random() * 1.5,
+        vy: 9 + Math.random() * 24,
+        vx: (Math.random() - 0.5) * 4.5,
+        phase: Math.random() * Math.PI * 2,
+        alpha: 0.2 + Math.random() * 0.5
+      });
+    }
+  }
+
+  function buildStars() {
+    var count = Math.max(24, Math.round(W * H / 15000));
+    stars = [];
+
+    for (var i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: 0.4 + Math.random() * 0.95,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.7 + Math.random() * 1.6,
+        base: 0.14 + Math.random() * 0.3
+      });
+    }
+  }
+
+  /* ==========================================================
+     6. 爱心下方小雪人：浮动 + 粒子
+     ========================================================== */
+  function buildSnowmen() {
+    var defs = [
+      { ch: '⛄', fs: 4.0, delay: 0,    p: 3 },
+      { ch: '⛄', fs: 5.6, delay: 0.55, p: 4 },
+      { ch: '⛄', fs: 4.2, delay: 1.1,  p: 3 },
+      { ch: '☃', fs: 3.6, delay: 1.6,  p: 2 }
+    ];
+
+    var frag = document.createDocumentFragment();
+
+    defs.forEach(function (d) {
+      var item = document.createElement('div');
+      item.className = 'sm-item';
+      item.style.fontSize = 'calc(var(--u) * ' + d.fs + ')';
+      item.style.animationDelay = d.delay + 's';
+
+      var glyph = document.createElement('span');
+      glyph.className = 'sm-glyph';
+      glyph.textContent = d.ch;
+      item.appendChild(glyph);
+
+      for (var i = 0; i < d.p; i++) {
+        var pt = document.createElement('span');
+        pt.className = 'sm-particle';
+
+        var ox = (Math.random() - 0.5) * 42;
+        var oy = (Math.random() - 0.5) * 34;
+        pt.style.left = (50 + ox).toFixed(1) + '%';
+        pt.style.top  = (52 + oy).toFixed(1) + '%';
+
+        var dx = (Math.random() - 0.5) * 26;
+        var dy = -18 - Math.random() * 26;
+        pt.style.setProperty('--dx', dx.toFixed(1) + 'px');
+        pt.style.setProperty('--dy', dy.toFixed(1) + 'px');
+
+        pt.style.animationDelay    = (-Math.random() * 3.4).toFixed(2) + 's';
+        pt.style.animationDuration = (2.6 + Math.random() * 1.8).toFixed(2) + 's';
+
+        item.appendChild(pt);
+      }
+
+      frag.appendChild(item);
+    });
+
+    snowmenEl.innerHTML = '';
+    snowmenEl.appendChild(frag);
+  }
+
+  /* ==========================================================
+     7. 顶部三行文字：逐字蹦出
+     ========================================================== */
+  var TOP_LINES = [
+    '立冬快乐 ❄️',
+    '愿今年冬季，喜乐安康，顺遂无恙 ❄️',
+    '愿这个冬天甜甜的，有人陪你'
+  ];
+
+  function buildTopCopy() {
+    topCopy.innerHTML = '';
+    var queue = [];
+
+    TOP_LINES.forEach(function (line) {
+      var p = document.createElement('p');
+      var chars = Array.from(line);
+
+      chars.forEach(function (ch) {
+        var span = document.createElement('span');
+        span.className = 'top-char';
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        p.appendChild(span);
+        queue.push({ el: span, endOfLine: false });
+      });
+
+      queue[queue.length - 1].endOfLine = true;
+      topCopy.appendChild(p);
+    });
+
+    return queue;
+  }
+
+  function playTopCopy() {
+    var queue = buildTopCopy();
+
+    if (reduceMotion) {
+      queue.forEach(function (item) { item.el.classList.add('show'); });
+      return;
+    }
+
+    var i = 0;
+
+    function step() {
+      if (i >= queue.length) return;
+
+      var item = queue[i];
+      item.el.classList.add('show');
+      i++;
+
+      var delay = 105;
+      if (item.endOfLine) delay = 320;
+
+      setTimeout(step, delay);
+    }
+
+    setTimeout(step, 500);
+  }
+
+  /* ==========================================================
+     8. 中心「立冬快乐」：钢琴音符式逐个弹出
+     ========================================================== */
+  var CENTER_TEXT = '立冬快乐';
+  var centerWraps = [];
+
+  function buildCenterTitle() {
+    heartCenter.innerHTML = '';
+    centerWraps = [];
+
+    for (var i = 0; i < CENTER_TEXT.length; i++) {
+      var wrap = document.createElement('span');
+      wrap.className = 'hc-wrap';
+
+      var ch = document.createElement('span');
+      ch.className = 'hc-char';
+      ch.textContent = CENTER_TEXT.charAt(i);
+
+      // 负延迟 → 落定后每个字的浮动相位错开，像音符波浪
+      ch.style.setProperty('--floatDelay', (-i * 0.5).toFixed(2) + 's');
+
+      wrap.appendChild(ch);
+      heartCenter.appendChild(wrap);
+      centerWraps.push(wrap);
+    }
+  }
+
+  function playCenterTitle() {
+    if (!centerWraps.length) buildCenterTitle();
+
+    if (reduceMotion) {
+      centerWraps.forEach(function (w) {
+        w.classList.add('show');
+        w.style.opacity = '1';
+      });
+      return;
+    }
+
+    var i = 0;
+
+    function step() {
+      if (i >= centerWraps.length) return;
+      centerWraps[i].classList.add('show');
+      i++;
+      setTimeout(step, 190);   // 每个字之间的节奏间隔
+    }
+
+    setTimeout(step, 1100);    // 等顶部文案先出来一点，再弹中心字
+  }
+
+  /* ==========================================================
+     9. 竖排立冬祝福
+     ========================================================== */
+  var BLESS_TEXT =
+    '立冬已至，天地渐寒，愿你晨起有暖阳，夜归有灯火，冷时有热汤，倦时有依靠。' +
+    '愿这个冬天，风不刺骨，雪不寒凉，所遇皆温柔，所行皆坦途。' +
+    '愿你把日子过得滚烫，把心事放下，把喜欢的事慢慢做，把重要的人好好爱。' +
+    '愿你在这个冬天收获小小的惊喜，也守住稳稳的幸福。' +
+    '愿你想去的地方都有好风景，想见的人都在等你。' +
+    '愿所有美好如期而至，所有期待皆有回响。' +
+    '立冬快乐，岁岁安康，年年欢喜，事事顺遂。';
+
+  var blessChars = [];
+  var charTimer = null;
+  var isOpen = false;
+
+  function buildBless() {
+    blessCard.innerHTML = '';
+    blessChars = [];
+
+    for (var i = 0; i < BLESS_TEXT.length; i++) {
+      var span = document.createElement('span');
+      span.className = 'bless-char';
+      span.textContent = BLESS_TEXT.charAt(i);
+      blessCard.appendChild(span);
+      blessChars.push(span);
+    }
+  }
+
+  function openBless() {
+    blessMask.classList.add('open');
+    phone.classList.add('blessing-open');
+    blessDone.classList.remove('show');
+
+    blessChars.forEach(function (c) { c.classList.remove('show'); });
+    clearTimeout(charTimer);
+
+    if (reduceMotion) {
+      blessChars.forEach(function (c) { c.classList.add('show'); });
+      blessDone.classList.add('show');
+      return;
+    }
+
+    var i = 0;
+
+    function step() {
+      if (i >= blessChars.length) {
+        blessDone.classList.add('show');
+        return;
+      }
+
+      blessChars[i].classList.add('show');
+      i++;
+      charTimer = setTimeout(step, 55);
+    }
+
+    charTimer = setTimeout(step, 320);
+  }
+
+  function closeBless() {
+    clearTimeout(charTimer);
+    blessMask.classList.remove('open');
+    phone.classList.remove('blessing-open');
+    blessDone.classList.remove('show');
+  }
+
+  tapBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (isOpen) return;
+    isOpen = true;
+    openBless();
+  });
+
+  blessDone.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!isOpen) return;
+    isOpen = false;
+    closeBless();
+  });
+
+  /* ==========================================================
+     10. 音乐播放器：《终会与你同行》
+     ========================================================== */
+  var MUSIC_SRC = '终会与你同行.mp3';
+
+  var bgMusic = new Audio();
+  bgMusic.loop = true;
+  bgMusic.preload = 'auto';
+  bgMusic.src = MUSIC_SRC;
+
+  var musicOn  = false;
+  var useSynth = false;
+
+  var actx = null;
+  var synthGain = null;
+  var synthTimer = null;
+
+  function startSynth() {
+    if (!actx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      actx = new AC();
+    }
+    if (actx.state === 'suspended') {
+      try { actx.resume(); } catch (e) {}
+    }
+
+    if (synthGain) {
+      try { synthGain.disconnect(); } catch (e) {}
+      synthGain = null;
+    }
+
+    synthGain = actx.createGain();
+    synthGain.gain.value = 0.0001;
+    synthGain.connect(actx.destination);
+    synthGain.gain.exponentialRampToValueAtTime(0.085, actx.currentTime + 1.4);
+
+    var notes = [523.25, 587.33, 659.25, 783.99, 880.00, 783.99, 659.25, 587.33];
+    var idx = 0;
+
+    function playNote() {
+      if (!musicOn || !synthGain) return;
+
+      var t = actx.currentTime;
+      var osc = actx.createOscillator();
+      var g   = actx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.value = notes[idx % notes.length];
+
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.85, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
+
+      osc.connect(g);
+      g.connect(synthGain);
+
+      osc.start(t);
+      osc.stop(t + 1.0);
+
+      idx++;
+      synthTimer = setTimeout(playNote, 430);
+    }
+
+    playNote();
+  }
+
+  function stopSynth() {
+    clearTimeout(synthTimer);
+    synthTimer = null;
+
+    if (synthGain && actx) {
+      try {
+        synthGain.gain.cancelScheduledValues(actx.currentTime);
+        synthGain.gain.setValueAtTime(Math.max(synthGain.gain.value, 0.0001), actx.currentTime);
+        synthGain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.35);
+      } catch (e) {}
+    }
+  }
+
+  function startPlayback() {
+    if (useSynth) {
+      startSynth();
+      return;
+    }
+
+    var p = bgMusic.play();
+
+    if (p && typeof p.then === 'function') {
+      p.then(function () {
+        // 正常播放
+      }).catch(function () {
+        useSynth = true;
+        startSynth();
+      });
+    }
+  }
+
+  function stopPlayback() {
+    try { bgMusic.pause(); } catch (e) {}
+    stopSynth();
+  }
+
+  function toggleMusic() {
+    if (!musicOn) {
+      musicOn = true;
+      musicBtn.classList.add('playing');
+      musicBtn.setAttribute('aria-pressed', 'true');
+      musicBtn.setAttribute('aria-label', '暂停背景音乐');
+      startPlayback();
+    } else {
+      musicOn = false;
+      musicBtn.classList.remove('playing');
+      musicBtn.setAttribute('aria-pressed', 'false');
+      musicBtn.setAttribute('aria-label', '播放背景音乐');
+      stopPlayback();
+    }
+  }
+
+  musicBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    toggleMusic();
+  });
+
+  /* ==========================================================
+     11. 尺寸
+     ========================================================== */
+  function resize() {
+    var rect = phone.getBoundingClientRect();
+    W = Math.max(1, rect.width);
+    H = Math.max(1, rect.height);
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+    phone.style.setProperty('--u', (W / 100) + 'px');
+
+    [bgCanvas, snowCanvas].forEach(function (cv) {
+      cv.width  = Math.round(W * DPR);
+      cv.height = Math.round(H * DPR);
+      cv.style.width  = W + 'px';
+      cv.style.height = H + 'px';
+      cv.getContext('2d').setTransform(DPR, 0, 0, DPR, 0, 0);
+    });
+
+    bgCtx.textAlign = 'center';
+    bgCtx.textBaseline = 'middle';
+
+    buildPattern();
+    buildFlakes();
+    buildStars();
+    initHeartParticles();
+
+    bgOffset = 0;
+    bgCtx.clearRect(0, 0, W, H);
+    snowCtx.clearRect(0, 0, W, H);
+
+    if (reduceMotion) drawHeartParticles(0.016, 0);
+  }
+
+  /* ==========================================================
+     12. 主循环
+     ========================================================== */
+  function frame(now) {
+    if (!last) last = now;
+
+    var dt = (now - last) / 1000;
+    if (!(dt > 0)) dt = 0.016;
+    if (dt > 0.05) dt = 0.05;
+    last = now;
+    time += dt;
+
+    bgCtx.clearRect(0, 0, W, H);
+    if (patternCanvas) {
+      bgOffset = (bgOffset + 5.5 * dt) % patternH;
+      bgCtx.drawImage(patternCanvas, 0, bgOffset - patternH, W, patternH);
+      bgCtx.drawImage(patternCanvas, 0, bgOffset, W, patternH);
+    }
+
+    if (!reduceMotion) drawHeartParticles(dt, time);
+
+    snowCtx.clearRect(0, 0, W, H);
+
+    var i;
+
+    for (i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      var sa = st.base * (0.45 + 0.55 * (0.5 + 0.5 * Math.sin(time * st.speed + st.phase)));
+
+      snowCtx.beginPath();
+      snowCtx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      snowCtx.fillStyle = 'rgba(255, 224, 242, ' + sa.toFixed(3) + ')';
+      snowCtx.fill();
+    }
+
+    for (i = 0; i < flakes.length; i++) {
+      var f = flakes[i];
+
+      f.y += f.vy * dt;
+      f.x += (Math.sin(time * 0.55 + f.phase) * 6.5 + f.vx) * dt;
+
+      if (f.y > H + 12) {
+        f.y = -12;
+        f.x = Math.random() * W;
+      }
+      if (f.x < -12) f.x = W + 12;
+      else if (f.x > W + 12) f.x = -12;
+
+      var a = f.alpha * (0.72 + 0.28 * Math.sin(time * 1.4 + f.phase));
+
+      snowCtx.beginPath();
+      snowCtx.arc(f.x, f.y, f.r * 2.7, 0, Math.PI * 2);
+      snowCtx.fillStyle = 'rgba(255, 162, 206, ' + (a * 0.13).toFixed(3) + ')';
+      snowCtx.fill();
+
+      snowCtx.beginPath();
+      snowCtx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+      snowCtx.fillStyle = 'rgba(255, 242, 249, ' + a.toFixed(3) + ')';
+      snowCtx.fill();
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  /* ==========================================================
+     13. 启动
+     ========================================================== */
+  buildOutline();
+  buildHeart();
+  buildCenterTitle();
+  buildBless();
+  buildSnowmen();
+
+  var rTimer = null;
+  var lastW = 0, lastH = 0;
+
+  function onResize() {
+    var rect = phone.getBoundingClientRect();
+    if (Math.abs(rect.width - lastW) < 1 && Math.abs(rect.height - lastH) < 1) return;
+
+    lastW = rect.width;
+    lastH = rect.height;
+
+    clearTimeout(rTimer);
+    rTimer = setTimeout(resize, 140);
+  }
+
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(onResize).observe(phone);
+  }
+
+  resize();
+  playTopCopy();
+  playCenterTitle();
+
+  requestAnimationFrame(function (t) {
+    last = t;
+    frame(t);
+  });
+
+})();
+</script>
+</body>
+</html>

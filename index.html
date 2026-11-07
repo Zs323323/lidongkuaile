@@ -210,37 +210,38 @@
 
   /* ===== 竖排祝福遮罩 ===== */
   .bless-mask {
-    position: absolute; inset: 0; z-index: 8; background: rgba(2, 0, 6, 0.56); opacity: 0; visibility: hidden;
+    position: absolute; inset: 0; z-index: 8; background: rgba(2, 0, 6, 0.6); opacity: 0; visibility: hidden;
     pointer-events: none; transition: opacity 0.55s ease, visibility 0.55s ease;
   }
   .bless-mask.open { opacity: 1; visibility: visible; pointer-events: auto; }
   
-  /* 解决文字不全：扩大容器并支持横滑 */
   .bless-box {
-    position: absolute; left: 0; right: 0; top: 9%; bottom: 9%;
-    display: block; /* 用 block 配合 inline-block 实现居中与滚动 */
-    overflow-x: auto; overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    text-align: center; /* 字数少时居中 */
-    padding: 0 5px;
+    position: absolute; left: 0; right: 0; top: 10%; bottom: 10%;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 4px;
   }
-  .bless-box::-webkit-scrollbar { display: none; }
-  .bless-box { scrollbar-width: none; }
 
   .bless-card {
-    writing-mode: vertical-rl; text-orientation: upright; 
-    display: inline-block; /* 跟着 text-align: center 居中 */
-    height: 100%; 
-    font-size: calc(var(--u) * 2.8); /* 从 3.5 缩小到 2.8 保证放得下 */
-    line-height: 1.65; /* 从 1.9 紧凑到 1.65 */
-    letter-spacing: 0.04em; 
-    font-weight: 500; color: #ffd9ea;
-    text-shadow: 0 0 10px rgba(255, 152, 202, 0.72), 0 0 26px rgba(255, 80, 160, 0.4), 0 0 54px rgba(255, 50, 130, 0.2);
-    transform: translateY(10px); opacity: 0; transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
+    display: inline-block; transform: translateY(10px); opacity: 0; 
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
   }
   .bless-mask.open .bless-card { transform: translateY(0); opacity: 1; }
-  
-  .bless-char { display: inline-block; opacity: 0; will-change: opacity, transform; }
+
+  /* 用 flex 手动排版竖排文字，避免手机浏览器折行 bug */
+  .bless-cols {
+    display: flex; flex-direction: row-reverse; justify-content: center;
+    gap: calc(var(--u) * 1.5); /* 列间距 */
+    height: 100%;
+  }
+  .bless-col {
+    display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+    font-size: calc(var(--u) * 3.0); /* 字体放大到 3.0u 并固定 */
+    line-height: 1.6; font-weight: 500; color: #ffd9ea;
+    text-shadow: 0 0 10px rgba(255, 152, 202, 0.72), 0 0 26px rgba(255, 80, 160, 0.4), 0 0 54px rgba(255, 50, 130, 0.2);
+    white-space: nowrap; /* 确保每个字本身不折行 */
+  }
+
+  .bless-char { display: inline-block; opacity: 0; will-change: opacity, transform; padding: 1px 0; }
   .bless-char.show { opacity: 1; animation: charPop 0.44s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
   @keyframes charPop {
     0%   { opacity: 0; transform: scale(0.25); }
@@ -740,6 +741,7 @@
     setTimeout(step, 1100);
   }
 
+  // 解决文字被裁剪的核心：在 JS 中手动断行
   var BLESS_TEXT =
     '立冬已至，天地渐寒，愿你晨起有暖阳，夜归有灯火，冷时有热汤，倦时有依靠。' +
     '愿这个冬天，风不刺骨，雪不寒凉，所遇皆温柔，所行皆坦途。' +
@@ -756,13 +758,34 @@
   function buildBless() {
     blessCard.innerHTML = '';
     blessChars = [];
-    for (var i = 0; i < BLESS_TEXT.length; i++) {
-      var span = document.createElement('span');
-      span.className = 'bless-char';
-      span.textContent = BLESS_TEXT.charAt(i);
-      blessCard.appendChild(span);
-      blessChars.push(span);
+
+    var chars = Array.from(BLESS_TEXT);
+    var totalChars = chars.length;
+    var charsPerCol = 26; // 每列最多 26 个字，保证高度绝对安全
+    var totalCols = Math.ceil(totalChars / charsPerCol);
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'bless-cols';
+
+    for (var c = 0; c < totalCols; c++) {
+      var col = document.createElement('div');
+      col.className = 'bless-col';
+
+      for (var i = 0; i < charsPerCol; i++) {
+        var idx = c * charsPerCol + i;
+        if (idx >= totalChars) break;
+
+        var span = document.createElement('span');
+        span.className = 'bless-char';
+        span.textContent = chars[idx];
+        
+        col.appendChild(span);
+        blessChars.push(span);
+      }
+      wrapper.appendChild(col);
     }
+
+    blessCard.appendChild(wrapper);
   }
 
   function openBless() {
@@ -786,7 +809,7 @@
       }
       blessChars[i].classList.add('show');
       i++;
-      charTimer = setTimeout(step, 35); // 速度调快，避免等待焦虑
+      charTimer = setTimeout(step, 35); 
     }
     charTimer = setTimeout(step, 250);
   }
@@ -915,10 +938,8 @@
     var newH = Math.max(1, rect.height);
     var newDpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // 优化移动端体验：如果是手机滑动导致地址栏收起（高度微小变化），不要重新渲染
     if (newW === W && newH === H && newDpr === DPR) return;
     
-    // 针对移动端高度微小变化做宽容处理
     if (W > 0 && newW === W && Math.abs(newH - H) < 80) {
       H = newH; 
       return; 

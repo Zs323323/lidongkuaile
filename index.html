@@ -82,11 +82,11 @@
   .top-right {
     position: absolute; top: 2.2%; right: 3.2%; z-index: 12;
     display: flex; align-items: center; gap: calc(var(--u) * 1.4);
-    animation: btnIn 1s ease 1.9s both;
+    opacity: 0; visibility: hidden; transform: translateY(-8px);
+    transition: opacity 0.6s ease, visibility 0.6s ease, transform 0.6s ease;
   }
-  @keyframes btnIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to   { opacity: 1; transform: translateY(0); }
+  .top-right.show {
+    opacity: 1; visibility: visible; transform: translateY(0);
   }
   
   .tap-btn {
@@ -210,24 +210,19 @@
 
   /* ===== 横排祝福遮罩 ===== */
   .bless-mask {
-    position: absolute; inset: 0; z-index: 8; background: rgba(2, 0, 6, 0.75); opacity: 0; visibility: hidden;
+    position: absolute; inset: 0; z-index: 8; background: rgba(2, 0, 6, 0.7); opacity: 0; visibility: hidden;
     pointer-events: none; transition: opacity 0.55s ease, visibility 0.55s ease;
-    overflow-y: auto; -webkit-overflow-scrolling: touch; /* 关键：允许滚动防截断 */
+    display: flex; align-items: center; justify-content: center;
+    padding: 15% 6%; 
   }
   .bless-mask.open { opacity: 1; visibility: visible; pointer-events: auto; }
-  
-  .bless-wrap {
-    min-height: 100%; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 60px 8% 100px 8%; /* 底部留白给收起按钮 */
-  }
   
   .bless-card {
     width: 100%;
     text-align: justify; text-align-last: center;
-    font-size: calc(var(--u) * 3.4); 
+    font-size: calc(var(--u) * 3.0); /* 字号微调，让一行能容纳 30 字左右 */
     line-height: 2.1; 
-    letter-spacing: 0.08em; 
+    letter-spacing: 0.05em; 
     font-weight: 500; 
     color: #ffd9ea;
     text-shadow: 
@@ -250,10 +245,10 @@
 
   /* ===== 播放完成后的收起按钮 ===== */
   .bless-done {
-    position: fixed; left: 50%; bottom: 4%; transform: translateX(-50%) translateY(8px);
+    position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%) translateY(8px);
     display: flex; align-items: center; gap: calc(var(--u) * 1.1); padding: calc(var(--u) * 1.3) calc(var(--u) * 2.2);
     border: none; background: rgba(2,0,6,0.6); border-radius: 30px; cursor: pointer;
-    opacity: 0; visibility: hidden; z-index: 15; /* 悬浮于顶部 */
+    opacity: 0; visibility: hidden; z-index: 10;
     transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.55s ease;
   }
   .bless-done.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
@@ -279,7 +274,6 @@
   /* ===== 减少动态效果 ===== */
   @media (prefers-reduced-motion: reduce) {
     .glow, .heart-dot, .tap-snowman, .tap-label, .sm-item, .sm-particle, .done-snowman, .done-label { animation: none !important; }
-    .top-right { animation: none !important; opacity: 1; }
     .music-note, .music-ring { animation: none !important; }
     .heart-dot { opacity: 1; }
     .heart-center { animation: none !important; opacity: 1; }
@@ -287,7 +281,7 @@
     .hc-char { animation: none !important; }
     .top-char { opacity: 1; animation: none !important; }
     .bless-char { opacity: 1; animation: none !important; }
-    .bless-mask, .bless-card, .bless-done { transition: none; }
+    .bless-mask, .bless-card, .bless-done, .top-right { transition: none; }
     .sm-particle { display: none; }
   }
 </style>
@@ -301,7 +295,8 @@
 
   <header class="top-copy" id="topCopy"></header>
 
-  <div class="top-right">
+  <!-- 右上角按钮区 -->
+  <div class="top-right" id="topRight">
     <button class="tap-btn" id="tapBtn" type="button" aria-label="点击查看立冬祝福">
       <span class="tap-snowman" aria-hidden="true">⛄</span>
       <span class="tap-label">点击</span>
@@ -325,9 +320,7 @@
 
   <!-- 祝福遮罩 -->
   <div class="bless-mask" id="blessMask">
-    <div class="bless-wrap">
-      <div class="bless-card" id="blessCard"></div>
-    </div>
+    <div class="bless-card" id="blessCard"></div>
     <button class="bless-done" id="blessDone" type="button" aria-label="收起立冬祝福">
       <span class="done-snowman" aria-hidden="true">⛄</span>
       <span class="done-label">收起</span>
@@ -355,6 +348,7 @@
   var blessDone   = document.getElementById('blessDone');
   var topCopy     = document.getElementById('topCopy');
   var snowmenEl   = document.getElementById('snowmen');
+  var topRightEl  = document.getElementById('topRight');
 
   var bgCtx   = bgCanvas.getContext('2d');
   var snowCtx = snowCanvas.getContext('2d');
@@ -691,11 +685,17 @@
     var queue = buildTopCopy();
     if (reduceMotion) {
       queue.forEach(function (item) { item.el.classList.add('show'); });
+      topRightEl.classList.add('show'); 
       return;
     }
     var i = 0;
     function step() {
-      if (i >= queue.length) return;
+      if (i >= queue.length) {
+        setTimeout(function() {
+          topRightEl.classList.add('show');
+        }, 400);
+        return;
+      }
       var item = queue[i];
       item.el.classList.add('show');
       i++;
@@ -741,15 +741,10 @@
     setTimeout(step, 1100);
   }
 
-  // 横向祝福文字
+  // 每行 30 多字，整体 2.5 行的精准文案（约 75 字符）
   var BLESS_TEXT =
-    '立冬已至，天地渐寒，愿你晨起有暖阳，夜归有灯火，冷时有热汤，倦时有依靠。' +
-    '愿这个冬天，风不刺骨，雪不寒凉，所遇皆温柔，所行皆坦途。' +
-    '愿你把日子过得滚烫，把心事放下，把喜欢的事慢慢做，把重要的人好好爱。' +
-    '愿你在这个冬天收获小小的惊喜，也守住稳稳的幸福。' +
-    '愿你想去的地方都有好风景，想见的人都在等你。' +
-    '愿所有美好如期而至，所有期待皆有回响。' +
-    '立冬快乐，岁岁安康，年年欢喜，事事顺遂。';
+    '立冬已至，天地渐寒。愿你晨起有暖阳，夜归有灯火，冷时有热汤，倦时有依靠。' +
+    '愿这个冬天，风不刺骨，雪不寒凉，所遇皆温柔，所求皆如愿。';
 
   var blessChars = [];
   var isOpen = false;
@@ -783,13 +778,11 @@
       return;
     }
 
-    // 使用 requestAnimationFrame 替代 setTimeout，防止移动端卡顿漏字
     var idx = 0;
     var startTime = performance.now();
 
     function step(now) {
       var elapsed = now - startTime;
-      // 每 45 毫秒弹出一个字
       var targetCount = Math.floor(elapsed / 45);
       if (targetCount > blessChars.length) targetCount = blessChars.length;
       
@@ -804,7 +797,6 @@
         blessDone.classList.add('show');
       }
     }
-    // 延迟 250ms 开始
     setTimeout(function() {
       animFrameId = requestAnimationFrame(step);
     }, 250);
